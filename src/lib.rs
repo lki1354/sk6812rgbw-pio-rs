@@ -16,7 +16,7 @@
 //use cortex_m;
 use fugit::{ExtU32, HertzU32};
 use rp2040_hal::{
-    gpio::{Function, Pin, PinId},
+    gpio::{Function, Pin, PinId, PullType, *},
     pio::{PIOExt, StateMachineIndex, Tx, UninitStateMachine, PIO},
     //timer::CountDown,
 };
@@ -54,26 +54,27 @@ use rp2040_hal::{
 /////     delay_for_at_least_60_microseconds();
 ///// };
 /////```
-//pub struct Ws2812Direct<P, SM, I>
-pub struct Ws2812Direct<P, SM>
+pub struct Ws2812Direct<P, SM, I, F>
 where
-    //I: PinId,
+    I: PinId,
     P: PIOExt,
+    F: Function,
     SM: StateMachineIndex,
 {
     tx: Tx<(P, SM)>,
+    _pin: Pin<I, F, DynPullType>
 }
 
-//impl<P, SM, I> Ws2812Direct<P, SM, I>
-impl<P, SM> Ws2812Direct<P, SM>
+impl<P, SM, I, F> Ws2812Direct<P, SM, I, F>
 where
-    //I: PinId,
+    I: PinId,
     P: PIOExt,
+    F: Function,
     SM: StateMachineIndex,
 {
     /// Creates a new instance of this driver.
     pub fn new(
-        //pin: Pin<I, Function<P>>,
+        pin: Pin<I, F, DynPullType>,
         pio: &mut PIO<P>,
         sm: UninitStateMachine<(P, SM)>,
         clock_freq: fugit::HertzU32,
@@ -130,7 +131,7 @@ where
             // only use TX FIFO
             .buffers(rp2040_hal::pio::Buffers::OnlyTx)
             // Pin configuration
-            //.side_set_pin_base(I::DYN.num)
+            .side_set_pin_base(pin.id().num)
             // OSR config
             .out_shift_direction(rp2040_hal::pio::ShiftDirection::Left)
             .autopull(true)
@@ -139,11 +140,11 @@ where
             .build(sm);
 
         // Prepare pin's direction.
-        //sm.set_pindirs([(I::DYN.num, rp2040_hal::pio::PinDir::Output)]);
+        sm.set_pindirs([(pin.id().num, rp2040_hal::pio::PinDir::Output)]);
 
         sm.start();
 
-        Self { tx }
+        Self { tx, _pin: pin }
     }
 }
 
