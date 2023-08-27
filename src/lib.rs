@@ -13,47 +13,46 @@
 //! Bear in mind that you will have to take care of timing requirements
 //! yourself then.
 
-//use cortex_m;
 use fugit::{ExtU32, HertzU32};
 use rp2040_hal::{
-    gpio::{Function, Pin, PinId, PullType, *},
+    gpio::{Function, Pin, PinId, *},
     pio::{PIOExt, StateMachineIndex, Tx, UninitStateMachine, PIO},
-    //timer::CountDown,
+    timer::CountDown,
 };
-//use smart_leds_trait::SmartLedsWrite;
+use smart_leds_trait::SmartLedsWrite;
 
-///// This is the WS2812 PIO Driver.
-/////
-///// For blocking applications is recommended to use
-///// the [Ws2812] struct instead of this raw driver.
-/////
-///// If you use this driver directly, you will need to
-///// take care of the timing expectations of the [Ws2812Direct::write]
-///// method.
-/////
-///// Typical usage example:
-/////```ignore
-///// use rp2040_hal::clocks::init_clocks_and_plls;
-///// let clocks = init_clocks_and_plls(...);
-///// let pins = rp2040_hal::gpio::pin::bank0::Pins::new(...);
-/////
-///// let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
-///// let mut ws = Ws2812Direct::new(
-/////     pins.gpio4.into_mode(),
-/////     &mut pio,
-/////     sm0,
-/////     clocks.peripheral_clock.freq(),
-///// );
-/////
-///// // Then you will make sure yourself to not write too frequently:
-///// loop {
-/////     use smart_leds::{SmartLedsWrite, RGB8};
-/////     let color : RGB8 = (255, 0, 255).into();
-/////
-/////     ws.write([color].iter().copied()).unwrap();
-/////     delay_for_at_least_60_microseconds();
-///// };
-/////```
+/// This is the WS2812 PIO Driver.
+///
+/// For blocking applications is recommended to use
+/// the [Ws2812] struct instead of this raw driver.
+///
+/// If you use this driver directly, you will need to
+/// take care of the timing expectations of the [Ws2812Direct::write]
+/// method.
+///
+/// Typical usage example:
+///```ignore
+/// use rp2040_hal::clocks::init_clocks_and_plls;
+/// let clocks = init_clocks_and_plls(...);
+/// let pins = rp2040_hal::gpio::pin::bank0::Pins::new(...);
+///
+/// let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
+/// let mut ws = Ws2812Direct::new(
+///     pins.gpio4.into_mode(),
+///     &mut pio,
+///     sm0,
+///     clocks.peripheral_clock.freq(),
+/// );
+///
+/// // Then you will make sure yourself to not write too frequently:
+/// loop {
+///     use smart_leds::{SmartLedsWrite, RGB8};
+///     let color : RGB8 = (255, 0, 255).into();
+///
+///     ws.write([color].iter().copied()).unwrap();
+///     delay_for_at_least_60_microseconds();
+/// };
+///```
 pub struct Ws2812Direct<P, SM, I, F>
 where
     I: PinId,
@@ -62,7 +61,7 @@ where
     SM: StateMachineIndex,
 {
     tx: Tx<(P, SM)>,
-    _pin: Pin<I, F, DynPullType>
+    _pin: Pin<I, F, DynPullType>,
 }
 
 impl<P, SM, I, F> Ws2812Direct<P, SM, I, F>
@@ -148,122 +147,122 @@ where
     }
 }
 
-//impl<P, SM, I> SmartLedsWrite for Ws2812Direct<P, SM, I>
-//where
-//    I: PinId,
-//    P: PIOExt + FunctionConfig,
-//    Function<P>: ValidPinMode<I>,
-//    SM: StateMachineIndex,
-//{
-//    type Color = smart_leds_trait::RGB8;
-//    type Error = ();
-//    /// If you call this function, be advised that you will have to wait
-//    /// at least 60 microseconds between calls of this function!
-//    /// That means, either you get hold on a timer and the timing
-//    /// requirements right your self, or rather use [Ws2812].
-//    ///
-//    /// Please bear in mind, that it still blocks when writing into the
-//    /// PIO FIFO until all data has been transmitted to the LED chain.
-//    fn write<T, J>(&mut self, iterator: T) -> Result<(), ()>
-//    where
-//        T: Iterator<Item = J>,
-//        J: Into<Self::Color>,
-//    {
-//        for item in iterator {
-//            let color: Self::Color = item.into();
-//            let word =
-//                (u32::from(color.g) << 24) | (u32::from(color.r) << 16) | (u32::from(color.b) << 8);
-//
-//            while !self.tx.write(word) {
-//                cortex_m::asm::nop();
-//            }
-//        }
-//        Ok(())
-//    }
-//}
+impl<P, SM, I, F> SmartLedsWrite for Ws2812Direct<P, SM, I, F>
+where
+    I: PinId,
+    P: PIOExt,
+    F: Function,
+    SM: StateMachineIndex,
+{
+    type Color = smart_leds_trait::RGB8;
+    type Error = ();
+    /// If you call this function, be advised that you will have to wait
+    /// at least 60 microseconds between calls of this function!
+    /// That means, either you get hold on a timer and the timing
+    /// requirements right your self, or rather use [Ws2812].
+    ///
+    /// Please bear in mind, that it still blocks when writing into the
+    /// PIO FIFO until all data has been transmitted to the LED chain.
+    fn write<T, J>(&mut self, iterator: T) -> Result<(), ()>
+    where
+        T: Iterator<Item = J>,
+        J: Into<Self::Color>,
+    {
+        for item in iterator {
+            let color: Self::Color = item.into();
+            let word =
+                (u32::from(color.g) << 24) | (u32::from(color.r) << 16) | (u32::from(color.b) << 8);
 
-///// Instance of a WS2812 LED chain.
-/////
-///// Use the [Ws2812::write] method to update the WS2812 LED chain.
-/////
-///// Typical usage example:
-/////```ignore
-///// use rp2040_hal::clocks::init_clocks_and_plls;
-///// let clocks = init_clocks_and_plls(...);
-///// let pins = rp2040_hal::gpio::pin::bank0::Pins::new(...);
-/////
-///// let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
-/////
-///// let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
-///// let mut ws = Ws2812::new(
-/////     pins.gpio4.into_mode(),
-/////     &mut pio,
-/////     sm0,
-/////     clocks.peripheral_clock.freq(),
-/////     timer.count_down(),
-///// );
-/////
-///// loop {
-/////     use smart_leds::{SmartLedsWrite, RGB8};
-/////     let color : RGB8 = (255, 0, 255).into();
-/////
-/////     ws.write([color].iter().copied()).unwrap();
-/////
-/////     // Do other stuff here...
-///// };
-/////```
-//pub struct Ws2812<'timer, P, SM, I>
-//where
-//    I: PinId,
-//    P: PIOExt + FunctionConfig,
-//    Function<P>: ValidPinMode<I>,
-//    SM: StateMachineIndex,
-//{
-//    driver: Ws2812Direct<P, SM, I>,
-//    cd: CountDown<'timer>,
-//}
-//
-//impl<'timer, P, SM, I> Ws2812<'timer, P, SM, I>
-//where
-//    I: PinId,
-//    P: PIOExt + FunctionConfig,
-//    Function<P>: ValidPinMode<I>,
-//    SM: StateMachineIndex,
-//{
-//    /// Creates a new instance of this driver.
-//    pub fn new(
-//        pin: Pin<I, Function<P>>,
-//        pio: &mut PIO<P>,
-//        sm: UninitStateMachine<(P, SM)>,
-//        clock_freq: fugit::HertzU32,
-//        cd: CountDown,
-//    ) -> Ws2812<'timer, P, SM, I> {
-//        let driver = Ws2812Direct::new(pin, pio, sm, clock_freq);
-//
-//        Self { driver, cd }
-//    }
-//}
-//
-//impl<'timer, P, SM, I> SmartLedsWrite for Ws2812<'timer, P, SM, rp2040_hal::timer::CountDown<'timer>, I>
-//where
-//    I: PinId,
-//    P: PIOExt + FunctionConfig,
-//    Function<P>: ValidPinMode<I>,
-//    SM: StateMachineIndex,
-//{
-//    type Color = smart_leds_trait::RGB8;
-//    type Error = ();
-//    fn write<T, J>(&mut self, iterator: T) -> Result<(), ()>
-//    where
-//        T: Iterator<Item = J>,
-//        J: Into<Self::Color>,
-//    {
-//        self.driver.tx.clear_stalled_flag();
-//        while !self.driver.tx.is_empty() && !self.driver.tx.has_stalled() {}
-//
-//        self.cd.start(60u32.micros());
-//        let _ = nb::block!(self.cd.wait());
-//
-//        self.driver.write(iterator)
-//    }
-//}
+            while !self.tx.write(word) {
+                cortex_m::asm::nop();
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Instance of a WS2812 LED chain.
+///
+/// Use the [Ws2812::write] method to update the WS2812 LED chain.
+///
+/// Typical usage example:
+///```ignore
+/// use rp2040_hal::clocks::init_clocks_and_plls;
+/// let clocks = init_clocks_and_plls(...);
+/// let pins = rp2040_hal::gpio::pin::bank0::Pins::new(...);
+///
+/// let timer = Timer::new(pac.TIMER, &mut pac.RESETS);
+///
+/// let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
+/// let mut ws = Ws2812::new(
+///     pins.gpio4.into_mode(),
+///     &mut pio,
+///     sm0,
+///     clocks.peripheral_clock.freq(),
+///     timer.count_down(),
+/// );
+///
+/// loop {
+///     use smart_leds::{SmartLedsWrite, RGB8};
+///     let color : RGB8 = (255, 0, 255).into();
+///
+///     ws.write([color].iter().copied()).unwrap();
+///
+///     // Do other stuff here...
+/// };
+///```
+pub struct Ws2812<'timer, P, SM, I, F>
+where
+    I: PinId,
+    P: PIOExt,
+    F: Function,
+    SM: StateMachineIndex,
+{
+    driver: Ws2812Direct<P, SM, I, F>,
+    cd: CountDown<'timer>,
+}
+
+impl<'timer, P, SM, I, F> Ws2812<'timer, P, SM, I, F>
+where
+    I: PinId,
+    P: PIOExt,
+    F: Function,
+    SM: StateMachineIndex,
+{
+    /// Creates a new instance of this driver.
+    pub fn new(
+        pin: Pin<I, F, DynPullType>,
+        pio: &mut PIO<P>,
+        sm: UninitStateMachine<(P, SM)>,
+        clock_freq: fugit::HertzU32,
+        cd: CountDown<'timer>,
+    ) -> Ws2812<'timer, P, SM, I, F> {
+        let driver = Ws2812Direct::new(pin, pio, sm, clock_freq);
+
+        Self { driver, cd }
+    }
+}
+
+impl<'timer, P, SM, I, F> SmartLedsWrite for Ws2812<'timer, P, SM, I, F>
+where
+    I: PinId,
+    P: PIOExt,
+    F: Function,
+    SM: StateMachineIndex,
+{
+    type Color = smart_leds_trait::RGB8;
+    type Error = ();
+    fn write<T, J>(&mut self, iterator: T) -> Result<(), ()>
+    where
+        T: Iterator<Item = J>,
+        J: Into<Self::Color>,
+    {
+        self.driver.tx.clear_stalled_flag();
+        while !self.driver.tx.is_empty() && !self.driver.tx.has_stalled() {}
+
+        self.cd.start(60u32.micros());
+        let _ = nb::block!(self.cd.wait());
+
+        self.driver.write(iterator)
+    }
+}
