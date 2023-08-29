@@ -13,6 +13,7 @@
 //! Bear in mind that you will have to take care of timing requirements
 //! yourself then.
 
+use cortex_m::prelude::_embedded_hal_timer_CountDown;
 use fugit::{ExtU32, HertzU32};
 use rp2040_hal::{
     gpio::{Function, Pin, PinId, *},
