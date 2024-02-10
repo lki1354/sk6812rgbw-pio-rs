@@ -21,6 +21,9 @@ use rp2040_hal::{
     pio::{PIOExt, StateMachineIndex, Tx, UninitStateMachine, PIO},
 };
 use smart_leds_trait::SmartLedsWrite;
+use smart_leds_trait::RGBW;
+/// The colorspace is technically undefined, but generally sRGB is assumed.
+pub type RGBW8 = RGBW<u8,u8>;
 
 /// This is the WS2812 PIO Driver.
 ///
@@ -44,11 +47,12 @@ use smart_leds_trait::SmartLedsWrite;
 ///     sm0,
 ///     clocks.peripheral_clock.freq(),
 /// );
+/// use sk6812::RGBW8;
 ///
 /// // Then you will make sure yourself to not write too frequently:
 /// loop {
-///     use smart_leds::{SmartLedsWrite, RGB8};
-///     let color : RGB8 = (255, 0, 255).into();
+///     
+///     let color : RGBW8 = (255, 0, 255,100).into();
 ///
 ///     ws.write([color].iter().copied()).unwrap();
 ///     delay_for_at_least_60_microseconds();
@@ -155,7 +159,7 @@ where
     Function<P>: ValidPinMode<I>,
     SM: StateMachineIndex,
 {
-    type Color = smart_leds_trait::RGB8;
+    type Color = RGBW8;
     type Error = ();
     /// If you call this function, be advised that you will have to wait
     /// at least 60 microseconds between calls of this function!
@@ -172,7 +176,7 @@ where
         for item in iterator {
             let color: Self::Color = item.into();
             let word =
-                (u32::from(color.g) << 24) | (u32::from(color.r) << 16) | (u32::from(color.b) << 8);
+            (u32::from(color.r) ) | (u32::from(color.g) << 8) | (u32::from(color.b) << 16) | (u32::from(color.a) << 24);
 
             while !self.tx.write(word) {
                 cortex_m::asm::nop();
@@ -204,8 +208,8 @@ where
 /// );
 ///
 /// loop {
-///     use smart_leds::{SmartLedsWrite, RGB8};
-///     let color : RGB8 = (255, 0, 255).into();
+///   todo  use smart_leds::{SmartLedsWrite, RGBW};
+///     let color : RGBW = (255, 0, 255, 100).into();
 ///
 ///     ws.write([color].iter().copied()).unwrap();
 ///
@@ -253,7 +257,7 @@ where
     Function<P>: ValidPinMode<I>,
     SM: StateMachineIndex,
 {
-    type Color = smart_leds_trait::RGB8;
+    type Color = RGBW8;
     type Error = ();
     fn write<T, J>(&mut self, iterator: T) -> Result<(), ()>
     where
