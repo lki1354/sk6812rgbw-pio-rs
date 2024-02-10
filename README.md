@@ -1,3 +1,8 @@
+
+# todo
+- [ ] change the implementation to work for sk6812 rgbw leds.
+- [ ] package will be renamed
+
 # Ws2812b-pio
 
 Implements [`SmartLedsWrite`](https://docs.rs/smart-leds-trait/0.2.1/smart_leds_trait/trait.SmartLedsWrite.html)
