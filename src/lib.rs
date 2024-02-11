@@ -85,7 +85,7 @@ where
     ) -> Self {
         // prepare the PIO program
         let side_set = pio::SideSet::new(false, 1, false);
-        let mut a = pio::Assembler::new_with_side_set(side_set);
+        let mut a: pio::Assembler<32> = pio::Assembler::new_with_side_set(side_set);
 
         const T1: u8 = 2; // start bit
         const T2: u8 = 5; // data bit
@@ -176,7 +176,7 @@ where
         for item in iterator {
             let color: Self::Color = item.into();
             let word =
-            (u32::from(color.r) ) | (u32::from(color.g) << 8) | (u32::from(color.b) << 16) | (u32::from(color.a) << 24);
+            (u32::from(color.r) ) | (u32::from(color.g) << 8) | (u32::from(color.b) << 16) | (u32::from(color.a.0) << 24);
 
             while !self.tx.write(word) {
                 cortex_m::asm::nop();
